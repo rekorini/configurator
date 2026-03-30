@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Car Configurator</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --accent:#111111;
+      --shadow:0 12px 30px rgba(0,0,0,0.08);
+      --radius:20px;
+    }
+
+    body{
+      margin:0;
+      font-family: Inter, Arial, sans-serif;
+      background: linear-gradient(180deg,#ffffff 0%, #f6f7fb 100%);
+      color:var(--text);
+    }
+
+    .page{
+      max-width:1400px;
+      margin:0 auto;
+      padding:24px;
+    }
+
+    .hero{
+      background:linear-gradient(135deg,#111827 0%, #1f2937 100%);
+      color:white;
+      border-radius:28px;
+      padding:28px;
+      box-shadow:var(--shadow);
+      margin-bottom:24px;
+    }
+
+    .hero h1{
+      margin:0 0 8px;
+      font-size:clamp(28px,4vw,46px);
+      line-height:1.05;
+    }
+
+    .hero p{
+      margin:0;
+      color:rgba(255,255,255,0.8);
+      font-size:16px;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap:24px;
+      align-items:start;
+    }
+
+    .viewer-card,
+    .panel,
+    .summary-card{
+      background:var(--card);
+      border:1px solid rgba(17,24,39,0.06);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+
+    .viewer-card{
+      padding:24px;
+      overflow:hidden;
+    }
+
+    .viewer-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      margin-bottom:20px;
+      flex-wrap:wrap;
+    }
+
+    .viewer-top h2{
+      margin:0;
+      font-size:24px;
+    }
+
+    .badge{
+      background:#eef2ff;
+      color:#3730a3;
+      padding:10px 14px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:13px;
+    }
+
+    .car-stage{
+      position:relative;
+      min-height:420px;
+      border-radius:24px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(244,246,250,1) 45%),
+        linear-gradient(180deg,#f8fafc 0%, #eef2f7 100%);
+      border:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:30px;
+    }
+
+    .car-shadow{
+      position:absolute;
+      bottom:48px;
+      left:50%;
+      transform:translateX(-50%);
+      width:72%;
+      height:36px;
+      background:radial-gradient(ellipse at center, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0) 75%);
+      filter:blur(5px);
+      z-index:1;
+      pointer-events:none;
+    }
+
+    .car-stack{
+      position:relative;
+      z-index:2;
+      width:min(100%, 920px);
+    }
+
+    .car{
+      display:block;
+      width:100%;
+      height:auto;
+      position:relative;
+      z-index:2;
+      object-fit:contain;
+    }
+
+    .color-layer{
+      position:absolute;
+      inset:0;
+      background:transparent;
+      mix-blend-mode:multiply;
+      opacity:0.58;
+      pointer-events:none;
+      z-index:3;
+    }
+
+    .hotspot{
+      position:absolute;
+      background:rgba(255,255,255,0.92);
+      backdrop-filter:blur(8px);
+      border:1px solid rgba(0,0,0,0.06);
+      border-radius:16px;
+      padding:12px 14px;
+      box-shadow:0 10px 20px rgba(0,0,0,0.08);
+      min-width:145px;
+      z-index:4;
+    }
+
+    .hotspot small{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      margin-bottom:4px;
+      font-weight:600;
+      letter-spacing:0.2px;
+    }
+
+    .hotspot strong{
+      font-size:14px;
+    }
+
+    .hotspot.model { top:18px; left:18px; }
+    .hotspot.paint { top:18px; right:18px; }
+    .hotspot.wheels { bottom:22px; left:22px; }
+    .hotspot.lights { bottom:22px; right:22px; }
+
+    .panel{
+      padding:20px;
+      position:sticky;
+      top:18px;
+    }
+
+    .panel h3{
+      margin:0 0 16px;
+      font-size:22px;
+    }
+
+    .section-title{
+      margin:24px 0 12px;
+      font-size:13px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:0.9px;
+      color:var(--muted);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .field{
+      background:#fafafa;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+
+    .field.full{
+      grid-column:1 / -1;
+    }
+
+    .field label{
+      display:block;
+      font-size:13px;
+      font-weight:700;
+      margin-bottom:8px;
+      color:#374151;
+    }
+
+    select{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid #d1d5db;
+      background:white;
+      font-size:14px;
+      color:#111827;
+      outline:none;
+    }
+
+    select:focus{
+      border-color:#111827;
+    }
+
+    .summary-card{
+      margin-top:18px;
+      padding:18px;
+    }
+
+    .price-main{
+      display:flex;
+      justify-content:space-between;
+      align-items:end;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .price-main span{
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .price-main strong{
+      font-size:34px;
+      line-height:1;
+    }
+
+    .rows{
+      display:grid;
+      gap:10px;
+    }
+
+    .row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+      font-size:14px;
+    }
+
+    .row:last-child{
+      border-bottom:none;
+    }
+
+    .row .name{
+      color:#374151;
+    }
+
+    .row .value{
+      color:#111827;
+      font-weight:700;
+      text-align:right;
+    }
+
+    @media (max-width: 1080px){
+      .layout{
+        grid-template-columns:1fr;
+      }
+
+      .panel{
+        position:static;
+      }
+    }
+
+    @media (max-width: 760px){
+      .page{
+        padding:14px;
+      }
+
+      .hero{
+        padding:22px;
+        border-radius:22px;
+      }
+
+      .viewer-card,
+      .panel,
+      .summary-card{
+        border-radius:18px;
+      }
+
+      .car-stage{
+        min-height:280px;
+        padding:18px;
+      }
+
+      .grid{
+        grid-template-columns:1fr;
+      }
+
+      .hotspot{
+        position:static;
+        margin-top:12px;
+        width:100%;
+      }
+
+      .viewer-card{
+        padding:16px;
+      }
+
+      .viewer-top{
+        margin-bottom:14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>Premium Car Configurator</h1>
+      <p>Модерен configurator стил, чист дизайн, смяна на модел, боядисване и обща сума с разбивка.</p>
+    </section>
+
+    <main class="layout">
+      <section>
+        <div class="viewer-card">
+          <div class="viewer-top">
+            <div>
+              <h2 id="selectedModelTitle">Sport Coupe</h2>
+            </div>
+            
+          </div>
+
+          <div class="car-stage">
+            <div class="car-shadow"></div>
+
+            <div class="hotspot model">
+              <small>Модел</small>
+              <strong id="hotspotModel">Sport Coupe</strong>
+            </div>
+
+            <div class="hotspot paint">
+              <small>Боя</small>
+              <strong id="hotspotPaint">Бял</strong>
+            </div>
+
+            <div class="hotspot wheels">
+              <small>Джанти</small>
+              <strong id="hotspotWheels">Стандартни</strong>
+            </div>
+
+            <div class="hotspot lights">
+              <small>Фарове</small>
+              <strong id="hotspotLights">LED</strong>
+            </div>
+
+            <div class="car-stack">
+              <img
+                id="carImage"
+                class="car"
+                src="koli/Sport Coupe.png"
+                alt="car png"
+                onerror="this.src='/koli/Sport Coupe.png'"
+              >
+              <div class="color-layer" id="colorLayer"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <h3>Конфигурация</h3>
+
+          <div class="section-title">Основни</div>
+          <div class="grid">
+            <div class="field full">
+              <label for="modelSelect">Модел</label>
+              <select id="modelSelect" onchange="changeModel(this)">
+                <option value="koli/Sport Coupe.png" data-title="Sport Coupe" data-base="20000">Sport Coupe</option>
+                <option value="koli/Supercar.png" data-title="Supercar" data-base="32000">Supercar</option>
+                <option value="koli/Hypercar.png" data-title="Hypercar" data-base="48000">Hypercar</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="colorSelect">Цвят</label>
+              <select id="colorSelect" onchange="changeColor(this)">
+                <option value="transparent" data-price="0" data-name="Бял">Бял (+0 лв)</option>
+                <option value="#c1121f" data-price="500" data-name="Червен">Червен (+500 лв)</option>
+                <option value="#1d4ed8" data-price="500" data-name="Син">Син (+500 лв)</option>
+                <option value="#111111" data-price="700" data-name="Черен">Черен (+700 лв)</option>
+                <option value="#166534" data-price="600" data-name="Зелен">Зелен (+600 лв)</option>
+                <option value="#9f1239" data-price="900" data-name="Burgundy">Burgundy (+900 лв)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="wheelsSelect">Джанти</label>
+              <select id="wheelsSelect" onchange="setOption('wheels', this)">
+                <option value="0" data-name="Стандартни">Стандартни (+0 лв)</option>
+                <option value="1200" data-name="Спортни">Спортни (+1200 лв)</option>
+                <option value="2500" data-name="Състезателни">Състезателни (+2500 лв)</option>
+                <option value="4000" data-name="Carbon">Carbon (+4000 лв)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Екстериор</div>
+          <div class="grid">
+            <div class="field">
+              <label for="spoilerSelect">Спойлер</label>
+              <select id="spoilerSelect" onchange="setOption('spoiler', this)">
+                <option value="0" data-name="Няма">Няма (+0 лв)</option>
+                <option value="800" data-name="Малък">Малък (+800 лв)</option>
+                <option value="1600" data-name="Голям">Голям (+1600 лв)</option>
+                <option value="3200" data-name="GT Racing">GT Racing (+3200 лв)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="lightsSelect">Фарове</label>
+              <select id="lightsSelect" onchange="setOption('lights', this)">
+                <option value="0" data-name="LED">LED (+0 лв)</option>
+                <option value="900" data-name="Matrix">Matrix (+900 лв)</option>
+                <option value="1800" data-name="Laser">Laser (+1800 лв)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="windowsSelect">Стъкла</label>
+              <select id="windowsSelect" onchange="setOption('windows', this)">
+                <option value="0" data-name="Нормални">Нормални (+0 лв)</option>
+                <option value="600" data-name="Затъмнени">Затъмнени (+600 лв)</option>
+                <option value="1200" data-name="Privacy">Privacy (+1200 лв)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="exhaustSelect">Ауспух</label>
+              <select id="exhaustSelect" onchange="setOption('exhaust', this)">
+                <option value="0" data-name="Стандартен">Стандартен (+0 лв)</option>
+                <option value="1400" data-name="Sport Exhaust">Sport Exhaust (+1400 лв)</option>
+                <option value="2600" data-name="Racing Exhaust">Racing Exhaust (+2600 лв)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Performance & Interior</div>
+          <div class="grid">
+            <div class="field">
+              <label for="brakesSelect">Спирачки</label>
+              <select id="brakesSelect" onchange="setOption('brakes', this)">
+                <option value="0" data-name="Стандартни">Стандартни (+0 лв)</option>
+                <option value="2200" data-name="Sport Brakes">Sport Brakes (+2200 лв)</option>
+                <option value="4800" data-name="Carbon Ceramic">Carbon Ceramic (+4800 лв)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="interiorSelect">Интериор</label>
+              <select id="interiorSelect" onchange="setOption('interior', this)">
+                <option value="0" data-name="Стандартен">Стандартен (+0 лв)</option>
+                <option value="2000" data-name="Leather">Leather (+2000 лв)</option>
+                <option value="3500" data-name="Luxury Leather">Luxury Leather (+3500 лв)</option>
+                <option value="5000" data-name="Carbon Interior">Carbon Interior (+5000 лв)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="price-main">
+              <div>
+                <span>Обща сума</span>
+                <strong><span id="price">20000</span> лв</strong>
+              </div>
+            </div>
+
+            <div class="rows">
+              <div class="row"><div class="name">Базова цена</div><div class="value"><span id="basePriceRow">20000</span> лв</div></div>
+              <div class="row"><div class="name">Цвят</div><div class="value"><span id="rowColor">0</span> лв</div></div>
+              <div class="row"><div class="name">Джанти</div><div class="value"><span id="rowWheels">0</span> лв</div></div>
+              <div class="row"><div class="name">Спойлер</div><div class="value"><span id="rowSpoiler">0</span> лв</div></div>
+              <div class="row"><div class="name">Фарове</div><div class="value"><span id="rowLights">0</span> лв</div></div>
+              <div class="row"><div class="name">Интериор</div><div class="value"><span id="rowInterior">0</span> лв</div></div>
+              <div class="row"><div class="name">Стъкла</div><div class="value"><span id="rowWindows">0</span> лв</div></div>
+              <div class="row"><div class="name">Спирачки</div><div class="value"><span id="rowBrakes">0</span> лв</div></div>
+              <div class="row"><div class="name">Ауспух</div><div class="value"><span id="rowExhaust">0</span> лв</div></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    let basePrice = 20000;
+
+    let options = {
+      color: 0,
+      wheels: 0,
+      spoiler: 0,
+      lights: 0,
+      interior: 0,
+      windows: 0,
+      brakes: 0,
+      exhaust: 0
+    };
+
+    function updatePrice(){
+      let total = basePrice;
+      for(const key in options){
+        total += Number(options[key]);
+      }
+
+      document.getElementById('price').innerText = total;
+      document.getElementById('basePriceRow').innerText = basePrice;
+      document.getElementById('rowColor').innerText = options.color;
+      document.getElementById('rowWheels').innerText = options.wheels;
+      document.getElementById('rowSpoiler').innerText = options.spoiler;
+      document.getElementById('rowLights').innerText = options.lights;
+      document.getElementById('rowInterior').innerText = options.interior;
+      document.getElementById('rowWindows').innerText = options.windows;
+      document.getElementById('rowBrakes').innerText = options.brakes;
+      document.getElementById('rowExhaust').innerText = options.exhaust;
+    }
+
+    function changeModel(selectEl){
+      const selected = selectEl.options[selectEl.selectedIndex];
+      const imagePath = selected.value;
+      const title = selected.dataset.title || selected.text;
+      const newBasePrice = Number(selected.dataset.base || 20000);
+
+      document.getElementById('carImage').src = imagePath;
+      document.getElementById('selectedModelTitle').innerText = title;
+      document.getElementById('hotspotModel').innerText = title;
+
+      basePrice = newBasePrice;
+      updatePrice();
+    }
+
+    function changeColor(selectEl){
+      const selected = selectEl.options[selectEl.selectedIndex];
+      const colorValue = selected.value;
+      const colorPrice = Number(selected.dataset.price || 0);
+      const colorName = selected.dataset.name || selected.text;
+
+      document.getElementById('colorLayer').style.background = colorValue;
+      document.getElementById('hotspotPaint').innerText = colorName;
+      options.color = colorPrice;
+      updatePrice();
+    }
+
+    function setOption(type, selectEl){
+      const selected = selectEl.options[selectEl.selectedIndex];
+      const price = Number(selected.value || 0);
+      const name = selected.dataset.name || selected.text;
+
+      options[type] = price;
+
+      if(type === 'wheels') document.getElementById('hotspotWheels').innerText = name;
+      if(type === 'lights') document.getElementById('hotspotLights').innerText = name;
+
+      updatePrice();
+    }
+
+    updatePrice();
+  </script>
+</body>
+</html>
